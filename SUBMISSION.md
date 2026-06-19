@@ -29,5 +29,12 @@ Plain HTML5 Canvas and vanilla JavaScript, no game engine or libraries. Every vi
 ## Browser compatibility
 Runs in Chrome, Firefox, Safari, and Edge (modern desktop browsers). Mobile is not supported because the game needs a physical keyboard, so leave "also works on mobile" unchecked. It is fully playable in the browser with no downloads, installs, launchers, or extensions, so check the confirmation box.
 
+## Maker's note
+I type fast and I always wanted a game where that actually felt like a superpower, not just a number on a results screen. So I built OVERTYPE. Words rush your core from every side, you type them to kill them, and when you chain fast clean words together you trigger Overdrive and the whole swarm drops into slow motion. That moment is the entire reason this game exists.
+
+It came together quickly and I've been balancing it by feel, so the feedback I actually want is honest: does the difficulty ramp feel fair, does the WPM on the death screen match how fast you really type, and which upgrades did you grab every run versus never touch? Also tell me how long you survived, because I want someone to crush my best.
+
+First thing to try: don't hunt for the nearest word. Just start typing and let the lock follow your letters. Once that clicks, go chase Overdrive.
+
 ## Play URL
-Fill in after you deploy (your Netlify or GitHub Pages URL).
+https://overtype.netlify.app/
