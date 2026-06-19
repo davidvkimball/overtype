@@ -24,13 +24,16 @@ const PLAYER_HP=5, HIT_RADIUS=46;
 const BASE_SPEED=18, OD_SCALE=0.34;
 const FLOW_MAX=100, FLOW_PER_LETTER=2.0, FLOW_WORD=6, FLOW_FAST=6, FLOW_TYPO=14, FLOW_DECAY=5;
 const OVERDRIVE_TIME=5200, OVER_LOCK=700;
-const FAST_MS_PER_CHAR=175;
+const FAST_MS_PER_CHAR=175, CHAIN_GRACE=900;
 const WORDFONT='bold 18px "Courier New",monospace';
-const WORDS=("cat dog sun fox key jam oak sky fly bee owl fog gem hat ink jet kit map nut ace arc bay cub den elf fin gap hub paw rib tag urn vex yak zip "+
-"rain fire wind leaf star moon wolf bolt glow dusk dawn mist rune snow gale tide reef vine sage iris jade onyx opal aqua claw dune echo fern gust halo kite mint node pike volt "+
-"ember flame frost storm blaze spark light night ridge cliff river ocean flare amber coral pearl raven crash quartz pixel vertex matrix photon plasma zenith cosmos nebula meteor aurora comet "+
-"shadow thunder crystal phoenix glacier horizon eclipse gravity tempest cascade torrent current typhoon cyclone monsoon velvet cipher "+
-"keyboard midnight sunlight moonbeam overload keystone keypress shortcut override velocity momentum pressure fortress darkness").split(/\s+/);
+const WORDS=(
+"cat dog sun fox key jam oak sky fly bee owl fog gem hat ink jet kit map nut ace arc bay cub den elf fin gap paw rib tag urn yak zip box bud bug cap cot cup cut dot dry ear egg fan fig fit gum hen hop ice ivy jar joy lab log net orb pad pen pin pod pop pot ram ray rim rod rug set sip spy tan tap tin top toy tub van wax web wig win zap zoo "+
+"rain fire wind leaf star moon wolf bolt glow dusk dawn mist rune snow gale tide reef vine sage iris jade onyx opal aqua claw dune echo fern gust halo kite mint node pike volt arch aura band bark beam bell bird boat bold bone book boot brew calm cave clay code coil cold cord crew crop cube curl dare dark dash deep dial dock dome dove drum dust ease edge fade felt file film foam fold fork fuel fuse gaze gear gift gold grid grip hail hawk haze heat herb hero hill hint hive hold hook hope horn hunt knot lace lake lamp lava leap lens lime lion loft loom loop lore lure mast maze mesh moss moth nest nova oath pace palm peak pine pond rake rank rift ring riot roam rock root rope rose ruby rush rust sail salt sand seal seed ship silk slab sled soar sole spin stem step swan tile tone trek vast veil wand wave weld wisp yarn zeal zone "+
+"ember flame frost storm blaze spark light night ridge cliff river ocean flare amber coral pearl raven crash pixel comet realm crown blade glory haven lunar solar orbit pulse glint prism brisk crisp flint grove maple birch cedar petal bloom thorn vapor steam cloud surge spire chime forge gleam quill scale slate stone swift talon torch trace siren ivory onset relay rapid swarm vigor arbor brine cabin delta glade chord ferry hatch knoll latch mirth nudge north south scout sworn "+
+"shadow velvet cipher quartz vertex matrix photon plasma zenith cosmos nebula meteor aurora canyon cavern beacon bridge castle cinder copper crater dazzle frozen garnet glider hollow icicle jungle kindle lagoon marble meadow mosaic nectar oxygen pebble plunge quiver ripple saddle scarab serene shiver signal silver simmer sliver socket spiral splash sprint static stream temple thrive tunnel vortex willow wisdom wonder "+
+"crystal phoenix glacier horizon eclipse gravity tempest cascade torrent current typhoon cyclone monsoon lantern thunder cluster diamond emerald flicker fortune gateway harvest journey kingdom mineral mystery network orchard pyramid radiant scatter shimmer sparkle stardom twinkle venture warrior whisper "+
+"keyboard midnight sunlight moonbeam overload keystone keypress shortcut override velocity momentum pressure fortress darkness asteroid backbone blizzard champion daylight dinosaur firewall fragment infinity lavender mountain notebook obsidian parallel platinum skeleton sunshine treasure wildfire"
+).split(/\s+/);
 const PROMPTS=("go run zap fix max new win ace big jolt kick lift nova rush tank volt ward warp edge gold hero duo ion sky").split(/\s+/);
 // ==================================================
 
@@ -93,11 +96,11 @@ function pickPrompts(){const sh=PROMPTS.slice().sort(()=>Math.random()-0.5);cons
 // ---- state ----
 let state, level, xp, xpNeed, score, combo, bestCombo, typos, charsTyped, runTime, wpm, peakWpm, overAt;
 let flow, overdrive, odUntil, spawnTimer;
-let enemies, target, typed, seqStart, lvlTyped, typedChars, typedMs, player, fx, choices;
+let enemies, target, typed, seqStart, lvlTyped, typedChars, typedMs, graceUntil, player, fx, choices;
 function freshRun(){
   state='play'; level=1; xp=0; xpNeed=14; score=0; combo=0; bestCombo=0; typos=0; charsTyped=0;
   runTime=0; wpm=0; peakWpm=0; flow=0; overdrive=false; odUntil=0; spawnTimer=300;
-  enemies=[]; target=null; typed=''; seqStart=0; lvlTyped=''; typedChars=0; typedMs=0; choices=null;
+  enemies=[]; target=null; typed=''; seqStart=0; lvlTyped=''; typedChars=0; typedMs=0; graceUntil=0; choices=null;
   player={hp:PLAYER_HP,maxHp:PLAYER_HP,enemySpeedMult:1,flowGainMult:1,scoreMult:1,spell:0,chain:0,regen:0,odTime:OVERDRIVE_TIME};
   fx={shake:0,flash:0,err:0,floats:[],parts:[],zaps:[]};
 }
@@ -107,9 +110,11 @@ function startGame(){freshRun();}
 function maxEnemies(){return Math.min(14,5+Math.floor(runTime/40000));}
 function spawnInterval(){return Math.max(520,1450-runTime/650-level*8);}
 function enemySpeed(){return Math.min(72,BASE_SPEED+runTime/13000+level*0.35)*player.enemySpeedMult*(overdrive?OD_SCALE:1);}
-function spawnPos(){const L=84,R=W-84,T=100,B=H-56,s=(Math.random()*4)|0;
-  if(s===0)return{x:rand(L,R),y:T};if(s===1)return{x:rand(L,R),y:B};
-  if(s===2)return{x:L,y:rand(T,B)};return{x:R,y:rand(T,B)};}
+function spawnPos(){const m=56,s=(Math.random()*4)|0;
+  if(s===0)return{x:rand(40,W-40),y:-m};
+  if(s===1)return{x:rand(40,W-40),y:H+m};
+  if(s===2)return{x:-m,y:rand(40,H-40)};
+  return{x:W+m,y:rand(40,H-40)};}
 function spawnEnemy(word){
   const p=spawnPos(), w=word||freeWord();
   enemies.push({word:w,x:p.x,y:p.y,dead:false});
@@ -135,6 +140,7 @@ function handleKey(ch){
   if(kT)killEnemy(kT);
 }
 function typo(){
+  if(NOW()<graceUntil)return;
   if(player.spell>0){player.spell--;sndShield();float(cx,cy-70,'SPELLCHECK','#f0a83c');return;}
   combo=0;typos++;if(!overdrive)flow=Math.max(0,flow-FLOW_TYPO);
   fx.shake=Math.max(fx.shake,4);fx.err=0.3;sndTypo();
@@ -154,10 +160,11 @@ function killEnemy(e){
   typed=''; target=null; seqStart=0;
 }
 function chainHit(src){
-  let cnt=player.chain;
+  let cnt=player.chain, hit=0;
   const others=enemies.filter(x=>!x.dead&&x!==src).sort((a,b)=>Math.hypot(a.x-src.x,a.y-src.y)-Math.hypot(b.x-src.x,b.y-src.y));
   for(const o of others){if(cnt<=0||Math.hypot(o.x-src.x,o.y-src.y)>180)break;
-    o.dead=true;score+=Math.round(o.word.length*6*player.scoreMult);zap(o.x,o.y);burst(o.x,o.y,8,'#a855f7');cnt--;}
+    o.dead=true;score+=Math.round(o.word.length*6*player.scoreMult);zap(o.x,o.y);burst(o.x,o.y,8,'#a855f7');cnt--;hit++;}
+  if(hit)graceUntil=NOW()+CHAIN_GRACE;
 }
 function startOverdrive(){overdrive=true;odUntil=NOW()+player.odTime;fx.flash=0.4;fx.shake=Math.max(fx.shake,6);sndDrive();float(cx,cy-90,'OVERDRIVE','#46e3ff');}
 function playerHit(e){
