@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OVERTYPE — logo export</title>
+<style>
+  html,body{margin:0;height:100%;background:#07060f;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:18px;font-family:system-ui,sans-serif;color:#9bf0ff;}
+  canvas{width:360px;height:360px;border-radius:28px;box-shadow:0 0 60px rgba(70,227,255,.22);}
+  button{font:600 14px system-ui;padding:11px 20px;border-radius:10px;border:1px solid #46e3ff;
+    background:#12101f;color:#9bf0ff;cursor:pointer;}
+  button:hover{background:#1a1830;}
+  p{color:#6f6a8c;font-size:12px;margin:0;}
+</style>
+</head>
+<body>
+<canvas id="L" width="1024" height="1024"></canvas>
+<button onclick="dl()">Download PNG — 1024 x 1024</button>
+<p>Square game logo. Click to download.</p>
+<script>
+const c=document.getElementById('L'), x=c.getContext('2d'), S=1024, M=S/2;
+function glow(col,b,fn){x.save();x.shadowColor=col;x.shadowBlur=b;fn();x.restore();}
+function draw(){
+  let g=x.createLinearGradient(0,0,0,S);g.addColorStop(0,'#0c0b1c');g.addColorStop(1,'#070610');
+  x.fillStyle=g;x.fillRect(0,0,S,S);
+  x.strokeStyle='rgba(120,90,200,0.07)';x.lineWidth=2;
+  for(let i=0;i<=S;i+=80){x.beginPath();x.moveTo(i,0);x.lineTo(i,S);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(S,i);x.stroke();}
+  let rg=x.createRadialGradient(M,M,40,M,M,470);rg.addColorStop(0,'rgba(70,227,255,0.16)');rg.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=rg;x.fillRect(0,0,S,S);
+  [[180,205],[845,235],[835,835],[200,830]].forEach(p=>{x.save();x.translate(p[0],p[1]);x.rotate(0.785);
+    glow('#ff5ca8',22,()=>{x.fillStyle='rgba(255,92,168,0.85)';x.fillRect(-24,-24,48,48);});x.restore();});
+  const R=300;
+  let ring=x.createLinearGradient(M-R,M-R,M+R,M+R);ring.addColorStop(0,'#46e3ff');ring.addColorStop(1,'#a855f7');
+  glow('#46e3ff',70,()=>{x.strokeStyle=ring;x.lineWidth=48;x.beginPath();x.arc(M,M,R,0,7);x.stroke();});
+  glow('#9bf0ff',80,()=>{x.fillStyle='#eafaff';x.beginPath();x.arc(M,M-18,116,0,7);x.fill();});
+  glow('#46e3ff',34,()=>{x.fillStyle='#46e3ff';x.fillRect(M-80,M+150,160,30);});
+}
+draw();
+function dl(){const a=document.createElement('a');a.download='overtype-logo.png';a.href=c.toDataURL('image/png');a.click();}
+</script>
+</body>
+</html>
