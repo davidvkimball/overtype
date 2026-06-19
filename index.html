@@ -24,7 +24,7 @@ const PLAYER_HP=5, HIT_RADIUS=46;
 const BASE_SPEED=18, OD_SCALE=0.34;
 const FLOW_MAX=100, FLOW_PER_LETTER=2.0, FLOW_WORD=6, FLOW_FAST=6, FLOW_TYPO=14, FLOW_DECAY=5;
 const OVERDRIVE_TIME=5200, OVER_LOCK=700;
-const FAST_MS_PER_CHAR=175, WPM_IDLE_GAP=1500;
+const FAST_MS_PER_CHAR=175;
 const WORDFONT='bold 18px "Courier New",monospace';
 const WORDS=("cat dog sun fox key jam oak sky fly bee owl fog gem hat ink jet kit map nut ace arc bay cub den elf fin gap hub paw rib tag urn vex yak zip "+
 "rain fire wind leaf star moon wolf bolt glow dusk dawn mist rune snow gale tide reef vine sage iris jade onyx opal aqua claw dune echo fern gust halo kite mint node pike volt "+
@@ -93,11 +93,11 @@ function pickPrompts(){const sh=PROMPTS.slice().sort(()=>Math.random()-0.5);cons
 // ---- state ----
 let state, level, xp, xpNeed, score, combo, bestCombo, typos, charsTyped, runTime, wpm, peakWpm, overAt;
 let flow, overdrive, odUntil, spawnTimer;
-let enemies, target, typed, seqStart, lvlTyped, activeChars, activeMs, lastKeyAt, player, fx, choices;
+let enemies, target, typed, seqStart, lvlTyped, typedChars, typedMs, player, fx, choices;
 function freshRun(){
   state='play'; level=1; xp=0; xpNeed=14; score=0; combo=0; bestCombo=0; typos=0; charsTyped=0;
   runTime=0; wpm=0; peakWpm=0; flow=0; overdrive=false; odUntil=0; spawnTimer=300;
-  enemies=[]; target=null; typed=''; seqStart=0; lvlTyped=''; activeChars=0; activeMs=0; lastKeyAt=0; choices=null;
+  enemies=[]; target=null; typed=''; seqStart=0; lvlTyped=''; typedChars=0; typedMs=0; choices=null;
   player={hp:PLAYER_HP,maxHp:PLAYER_HP,enemySpeedMult:1,flowGainMult:1,scoreMult:1,spell:0,chain:0,regen:0,odTime:OVERDRIVE_TIME};
   fx={shake:0,flash:0,err:0,floats:[],parts:[],zaps:[]};
 }
@@ -124,7 +124,7 @@ function handleKey(ch){
   const matches=enemies.filter(e=>!e.dead&&e.word.startsWith(cand));
   if(matches.length===0){typo();return;}          // the keystroke fits no live word
   if(typed==='')seqStart=NOW();
-  typed=cand; charsTyped++; const kt=NOW(); if(lastKeyAt&&kt-lastKeyAt<WPM_IDLE_GAP)activeMs+=kt-lastKeyAt; lastKeyAt=kt; activeChars++; sndType(combo);
+  typed=cand; charsTyped++; sndType(combo);
   if(!overdrive){flow=Math.min(FLOW_MAX,flow+FLOW_PER_LETTER*player.flowGainMult);if(flow>=FLOW_MAX)startOverdrive();}
   // keep target if it still fits the prefix, else slide to the nearest that does
   if(!target||target.dead||!target.word.startsWith(typed))target=nearest(matches);
@@ -145,7 +145,7 @@ function killEnemy(e){
   combo++; if(combo>bestCombo)bestCombo=combo;
   const mult=1+combo*0.1;
   const pts=Math.round(e.word.length*12*mult*(overdrive?2:1)*(fast?1.6:1)*player.scoreMult);
-  score+=pts; xp+=1;
+  score+=pts; xp+=1; typedChars+=e.word.length; typedMs+=dt;
   if(!overdrive){flow=Math.min(FLOW_MAX,flow+FLOW_WORD+(fast?FLOW_FAST:0));if(flow>=FLOW_MAX)startOverdrive();}
   zap(e.x,e.y); burst(e.x,e.y,fast?18:11,fast?'#46e3ff':'#ff5ca8');
   float(e.x,e.y-12,(fast?'FAST  +':'+')+pts,fast?'#46e3ff':'#cfe6ff');
@@ -205,7 +205,7 @@ function update(now,dt){
       e.x+=dx/d*spd*dt/1000; e.y+=dy/d*spd*dt/1000;}
     enemies=enemies.filter(e=>!e.dead);
     if(target&&target.dead){target=null;typed='';}
-    if(activeMs>800)wpm=Math.round((activeChars/5)/(activeMs/60000)); if(wpm>peakWpm)peakWpm=wpm;
+    if(typedMs>300)wpm=Math.round((typedChars/5)/(typedMs/60000)); if(wpm>peakWpm)peakWpm=wpm;
     if(xp>=xpNeed)enterLevelUp();
   }
   stepFx(dt);
