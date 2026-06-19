@@ -99,10 +99,12 @@ function pickPrompts(){const sh=PROMPTS.slice().sort(()=>Math.random()-0.5);cons
 let state, level, xp, xpNeed, score, combo, bestCombo, typos, charsTyped, runTime, wpm, peakWpm, overAt;
 let flow, overdrive, odUntil, spawnTimer;
 let enemies, target, typed, seqStart, lvlTyped, typedChars, typedMs, graceUntil, player, fx, choices;
+let best={score:0,wpm:0,combo:0}, newBest=false;
+try{const _b=JSON.parse(localStorage.getItem('overtype_best'));if(_b){best.score=_b.score||0;best.wpm=_b.wpm||0;best.combo=_b.combo||0;}}catch(e){}
 function freshRun(){
   state='play'; level=1; xp=0; xpNeed=14; score=0; combo=0; bestCombo=0; typos=0; charsTyped=0;
   runTime=0; wpm=0; peakWpm=0; flow=0; overdrive=false; odUntil=0; spawnTimer=300;
-  enemies=[]; target=null; typed=''; seqStart=0; lvlTyped=''; typedChars=0; typedMs=0; graceUntil=0; choices=null;
+  enemies=[]; target=null; typed=''; seqStart=0; lvlTyped=''; typedChars=0; typedMs=0; graceUntil=0; newBest=false; choices=null;
   player={hp:PLAYER_HP,maxHp:PLAYER_HP,enemySpeedMult:1,flowGainMult:1,scoreMult:1,spell:0,chain:0,regen:0,odTime:OVERDRIVE_TIME};
   fx={shake:0,flash:0,err:0,floats:[],parts:[],zaps:[]};
 }
@@ -174,7 +176,17 @@ function playerHit(e){
   player.hp--; combo=0; fx.shake=14; fx.err=0.6; sndHurt();
   if(player.hp<=0)gameOver();
 }
-function gameOver(){state='over';overAt=NOW();sndOver();}
+function gameOver(){state='over';overAt=NOW();sndOver();
+  newBest=score>best.score;
+  if(score>best.score)best.score=score;
+  if(peakWpm>best.wpm)best.wpm=Math.round(peakWpm);
+  if(bestCombo>best.combo)best.combo=bestCombo;
+  try{localStorage.setItem('overtype_best',JSON.stringify(best));}catch(e){}}
+function shareRun(){
+  const url='https://overtype.netlify.app/';
+  const t='I scored '+score+' in OVERTYPE at '+Math.round(peakWpm)+' WPM. A neon typing survival game: type fast, hit Overdrive, survive. Can you beat it?';
+  window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(t)+'&url='+encodeURIComponent(url),'_blank');
+}
 
 function enterLevelUp(){
   level++; xp-=xpNeed; xpNeed=Math.round(xpNeed*1.25)+3; state='levelup'; lvlTyped=''; sndLevel();
@@ -304,7 +316,8 @@ function drawTitle(now){
   ctx.fillStyle='rgba(7,6,16,0.62)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
   glow('rgba(70,227,255,0.8)',24,()=>{ctx.fillStyle='#eafaff';ctx.font='bold 60px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-30);});
   ctx.fillStyle='#ff5ca8';ctx.font='bold 13px "Courier New",monospace';ctx.fillText('T Y P E   F A S T   ·   S U R V I V E   ·   O V E R D R I V E',cx,cy+4);
-  if(Math.floor(now/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press any letter to begin',cx,cy+50);}
+  if(best.score>0){ctx.fillStyle='#8b86a8';ctx.font='13px "Courier New",monospace';ctx.fillText('BEST  '+best.score+'   ·   '+best.wpm+' wpm   ·   x'+best.combo,cx,cy+30);}
+  if(Math.floor(now/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press any letter to begin',cx,cy+54);}
 }
 function drawLevelUp(){
   ctx.fillStyle='rgba(7,6,16,0.78)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
@@ -328,11 +341,13 @@ function drawLevelUp(){
 }
 function drawOver(){
   ctx.fillStyle='rgba(7,6,16,0.82)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
-  glow('rgba(255,59,78,0.8)',26,()=>{ctx.fillStyle='#ff6a7a';ctx.font='bold 50px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-50);});
-  ctx.fillStyle='#eafaff';ctx.font='bold 20px "Courier New",monospace';ctx.fillText('SCORE  '+score,cx,cy-2);
+  glow('rgba(255,59,78,0.8)',26,()=>{ctx.fillStyle='#ff6a7a';ctx.font='bold 50px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-62);});
+  ctx.fillStyle='#eafaff';ctx.font='bold 20px "Courier New",monospace';ctx.fillText('SCORE  '+score,cx,cy-16);
+  if(newBest){glow('#46e3ff',10,()=>{ctx.fillStyle='#46e3ff';ctx.font='bold 13px "Courier New",monospace';ctx.fillText('NEW BEST',cx,cy+6);});}
   ctx.fillStyle='#a7a2c2';ctx.font='14px "Courier New",monospace';
-  ctx.fillText('peak '+Math.round(peakWpm)+' wpm   ·   best combo x'+bestCombo+'   ·   lv '+level+'   ·   '+(runTime/1000).toFixed(0)+'s',cx,cy+26);
-  if(NOW()-overAt>OVER_LOCK&&Math.floor(NOW()/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press  ENTER  to run it back',cx,cy+62);}
+  ctx.fillText('peak '+Math.round(peakWpm)+' wpm   ·   best combo x'+bestCombo+'   ·   lv '+level+'   ·   '+(runTime/1000).toFixed(0)+'s',cx,cy+30);
+  ctx.fillStyle='#6f6a8c';ctx.fillText('your best  '+best.score+'   ·   '+best.wpm+' wpm   ·   x'+best.combo,cx,cy+52);
+  if(NOW()-overAt>OVER_LOCK&&Math.floor(NOW()/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press  ENTER  to run it back   ·   S to share',cx,cy+84);}
 }
 function wrap(txt,x,y,maxw,lh){const words=txt.split(' ');let line='',yy=y;
   for(const w of words){const t=line?line+' '+w:w;if(ctx.measureText(t).width>maxw&&line){ctx.fillText(line,x,yy);line=w;yy+=lh;}else line=t;}
@@ -350,7 +365,7 @@ addEventListener('keydown',e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key;
   if(state==='title'){if(k.length===1||k==='Enter'){startGame();e.preventDefault();}return;}
-  if(state==='over'){if(k==='Enter'&&NOW()-overAt>OVER_LOCK){startGame();e.preventDefault();}return;}
+  if(state==='over'){if(k==='Enter'&&NOW()-overAt>OVER_LOCK){startGame();e.preventDefault();}else if((k==='s'||k==='S')&&NOW()-overAt>OVER_LOCK){shareRun();e.preventDefault();}return;}
   if(state==='levelup'){if(/^[a-zA-Z]$/.test(k)){handleLevelKey(k.toLowerCase());e.preventDefault();}return;}
   if(state==='play'&&/^[a-zA-Z]$/.test(k)){handleKey(k.toLowerCase());e.preventDefault();}
 });
