@@ -319,7 +319,7 @@ function drawLevelUp(){
 }
 function drawOver(){
   ctx.fillStyle='rgba(7,6,16,0.82)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
-  glow('rgba(255,59,78,0.8)',26,()=>{ctx.fillStyle='#ff6a7a';ctx.font='bold 50px Georgia,serif';ctx.fillText('OVERRUN',cx,cy-50);});
+  glow('rgba(255,59,78,0.8)',26,()=>{ctx.fillStyle='#ff6a7a';ctx.font='bold 50px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-50);});
   ctx.fillStyle='#eafaff';ctx.font='bold 20px "Courier New",monospace';ctx.fillText('SCORE  '+score,cx,cy-2);
   ctx.fillStyle='#a7a2c2';ctx.font='14px "Courier New",monospace';
   ctx.fillText('peak '+Math.round(peakWpm)+' wpm   ·   best combo x'+bestCombo+'   ·   lv '+level+'   ·   '+(runTime/1000).toFixed(0)+'s',cx,cy+26);

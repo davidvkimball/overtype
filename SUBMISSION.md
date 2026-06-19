@@ -9,10 +9,10 @@ Vanilla JS / Canvas
 ## One-line hook
 The faster you type, the slower they come.
 
-(Alternates: "Out-type the swarm before it overruns you." / "A typing survivor where speed is the weapon.")
+(Alternates: "Out-type the swarm before it reaches your core." / "A typing survivor where speed is the weapon.")
 
 ## What's your game about? (under 500 chars)
-OVERTYPE is a neon typing survival game. You're a lone core on a synthwave grid, and words rush in from every edge. Type a word to destroy it. The twist is Flow: type fast and clean and you fill an Overdrive meter that slams the whole swarm into slow motion while your score doubles. It's a typing test that fights back, built for that flow-state rush where your fingers outrun your brain. Level up, grab an upgrade, and see how long you last before you're overrun.
+OVERTYPE is a neon typing survival game. You're a lone core on a synthwave grid, and words rush in from every edge. Type a word to destroy it. The twist is Flow: type fast and clean and you fill an Overdrive meter that slams the whole swarm into slow motion while your score doubles. It's a typing test that fights back, built for that flow-state rush where your fingers outrun your brain. Level up, grab an upgrade, and see how long you last.
 
 ## How do you play? (under 600 chars)
 Survive. Words drift in from all sides toward your core in the center; type one to destroy that enemy before it reaches you. Just start typing and you lock onto a matching word, and the lock follows your letters, so typing "cou" slides you from "cow" to "couch". First 30 seconds: clear the closest words, keep a clean combo going, and watch the ring around your core fill. Fill it for Overdrive, where the swarm crawls and points double. Every several words you level up and type a short word to pick an upgrade.
