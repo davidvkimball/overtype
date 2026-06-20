@@ -330,7 +330,7 @@ function drawTitle(now){
   ctx.fillStyle='#ff5ca8';ctx.font='bold 13px "Courier New",monospace';ctx.fillText('T Y P E   F A S T   ·   S U R V I V E   ·   O V E R D R I V E',cx,cy-116);
   ctx.fillStyle='#8b86a8';ctx.font='bold 12px "Courier New",monospace';ctx.fillText('HIGH SCORES',cx,cy-80);
   if(boardState==='ok'&&board.length)drawBoard(board,cy-56,5,0);
-  else{ctx.fillStyle='#4d4a66';ctx.font='13px "Courier New",monospace';ctx.fillText(boardState==='loading'?'loading...':'leaderboard offline',cx,cy-46);}
+  else{ctx.fillStyle='#4d4a66';ctx.font='13px "Courier New",monospace';ctx.fillText(boardState==='loading'?'loading...':(boardState==='ok'?'no scores yet, be the first':'leaderboard offline'),cx,cy-46);}
   if(best.score>0){ctx.fillStyle='#8b86a8';ctx.font='13px "Courier New",monospace';ctx.fillText('your best  '+best.score+'   ·   '+best.wpm+' wpm   ·   x'+best.combo,cx,cy+70);}
   if(Math.floor(now/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press any letter to begin',cx,cy+106);}
 }
