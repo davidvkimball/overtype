@@ -1,0 +1,9 @@
+{
+  "name": "overtype",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OVERTYPE - a browser typing-survival game",
+  "dependencies": {
+    "@netlify/blobs": "^8.0.0"
+  }
+}

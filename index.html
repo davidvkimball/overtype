@@ -101,6 +101,10 @@ let flow, overdrive, odUntil, spawnTimer;
 let enemies, target, typed, seqStart, lvlTyped, typedChars, typedMs, graceUntil, player, fx, choices;
 let best={score:0,wpm:0,combo:0}, newBest=false;
 try{const _b=JSON.parse(localStorage.getItem('overtype_best'));if(_b){best.score=_b.score||0;best.wpm=_b.wpm||0;best.combo=_b.combo||0;}}catch(e){}
+let board=[], boardState='idle', initials='', subState='done', myRank=0;
+const LB='/.netlify/functions/leaderboard';
+async function loadBoard(){boardState='loading';try{const r=await fetch(LB);if(!r.ok)throw 0;board=await r.json();boardState='ok';}catch(e){boardState='err';}}
+async function submitScore(){subState='sent';try{const r=await fetch(LB,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:initials,score:score,wpm:Math.round(peakWpm)})});if(!r.ok)throw 0;const d=await r.json();board=d.top||[];myRank=d.rank||0;boardState='ok';subState='done';}catch(e){subState='err';}}
 function freshRun(){
   state='play'; level=1; xp=0; xpNeed=14; score=0; combo=0; bestCombo=0; typos=0; charsTyped=0;
   runTime=0; wpm=0; peakWpm=0; flow=0; overdrive=false; odUntil=0; spawnTimer=300;
@@ -108,7 +112,7 @@ function freshRun(){
   player={hp:PLAYER_HP,maxHp:PLAYER_HP,enemySpeedMult:1,flowGainMult:1,scoreMult:1,spell:0,chain:0,regen:0,odTime:OVERDRIVE_TIME};
   fx={shake:0,flash:0,err:0,floats:[],parts:[],zaps:[]};
 }
-function toTitle(){freshRun();state='title';enemies=[];}
+function toTitle(){freshRun();state='title';enemies=[];loadBoard();}
 function startGame(){freshRun();}
 
 function maxEnemies(){return Math.min(14,5+Math.floor(runTime/40000));}
@@ -181,7 +185,8 @@ function gameOver(){state='over';overAt=NOW();sndOver();
   if(score>best.score)best.score=score;
   if(peakWpm>best.wpm)best.wpm=Math.round(peakWpm);
   if(bestCombo>best.combo)best.combo=bestCombo;
-  try{localStorage.setItem('overtype_best',JSON.stringify(best));}catch(e){}}
+  try{localStorage.setItem('overtype_best',JSON.stringify(best));}catch(e){}
+  initials=''; myRank=0; subState=score>0?'enter':'skip';}
 function shareRun(){
   const url='https://overtype.netlify.app/';
   const t='I scored '+score+' in OVERTYPE at '+Math.round(peakWpm)+' WPM. A neon typing survival game: type fast, hit Overdrive, survive. Can you beat it?';
@@ -312,12 +317,22 @@ function drawHUD(){
   if(combo>1){ctx.fillStyle=combo>=10?'#46e3ff':'#f0a83c';ctx.font='bold 15px "Courier New",monospace';
     ctx.fillText('x'+combo+' COMBO',W-14,58);}
 }
+function drawBoard(list,yTop,rows,hi){
+  ctx.font='14px "Courier New",monospace';ctx.textAlign='center';
+  const n=Math.min(rows,list.length);
+  for(let i=0;i<n;i++){const e=list[i];
+    ctx.fillStyle=(hi&&hi===i+1)?'#46e3ff':'#c9c4e6';
+    ctx.fillText(String(i+1).padStart(2)+'   '+(e.name||'AAA')+'   '+String(e.score).padStart(7),cx,yTop+i*20);}
+}
 function drawTitle(now){
   ctx.fillStyle='rgba(7,6,16,0.62)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
-  glow('rgba(70,227,255,0.8)',24,()=>{ctx.fillStyle='#eafaff';ctx.font='bold 60px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-30);});
-  ctx.fillStyle='#ff5ca8';ctx.font='bold 13px "Courier New",monospace';ctx.fillText('T Y P E   F A S T   ·   S U R V I V E   ·   O V E R D R I V E',cx,cy+4);
-  if(best.score>0){ctx.fillStyle='#8b86a8';ctx.font='13px "Courier New",monospace';ctx.fillText('BEST  '+best.score+'   ·   '+best.wpm+' wpm   ·   x'+best.combo,cx,cy+30);}
-  if(Math.floor(now/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press any letter to begin',cx,cy+54);}
+  glow('rgba(70,227,255,0.8)',24,()=>{ctx.fillStyle='#eafaff';ctx.font='bold 54px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-150);});
+  ctx.fillStyle='#ff5ca8';ctx.font='bold 13px "Courier New",monospace';ctx.fillText('T Y P E   F A S T   ·   S U R V I V E   ·   O V E R D R I V E',cx,cy-116);
+  ctx.fillStyle='#8b86a8';ctx.font='bold 12px "Courier New",monospace';ctx.fillText('HIGH SCORES',cx,cy-80);
+  if(boardState==='ok'&&board.length)drawBoard(board,cy-56,5,0);
+  else{ctx.fillStyle='#4d4a66';ctx.font='13px "Courier New",monospace';ctx.fillText(boardState==='loading'?'loading...':'leaderboard offline',cx,cy-46);}
+  if(best.score>0){ctx.fillStyle='#8b86a8';ctx.font='13px "Courier New",monospace';ctx.fillText('your best  '+best.score+'   ·   '+best.wpm+' wpm   ·   x'+best.combo,cx,cy+70);}
+  if(Math.floor(now/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press any letter to begin',cx,cy+106);}
 }
 function drawLevelUp(){
   ctx.fillStyle='rgba(7,6,16,0.78)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
@@ -340,14 +355,27 @@ function drawLevelUp(){
     ctx.fillStyle='#a7a2c2';ctx.font='13px "Courier New",monospace';wrap(c.desc,x+cw/2,y+140,cw-30,17);}
 }
 function drawOver(){
-  ctx.fillStyle='rgba(7,6,16,0.82)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
-  glow('rgba(255,59,78,0.8)',26,()=>{ctx.fillStyle='#ff6a7a';ctx.font='bold 50px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-62);});
-  ctx.fillStyle='#eafaff';ctx.font='bold 20px "Courier New",monospace';ctx.fillText('SCORE  '+score,cx,cy-16);
-  if(newBest){glow('#46e3ff',10,()=>{ctx.fillStyle='#46e3ff';ctx.font='bold 13px "Courier New",monospace';ctx.fillText('NEW BEST',cx,cy+6);});}
-  ctx.fillStyle='#a7a2c2';ctx.font='14px "Courier New",monospace';
-  ctx.fillText('peak '+Math.round(peakWpm)+' wpm   ·   best combo x'+bestCombo+'   ·   lv '+level+'   ·   '+(runTime/1000).toFixed(0)+'s',cx,cy+30);
-  ctx.fillStyle='#6f6a8c';ctx.fillText('your best  '+best.score+'   ·   '+best.wpm+' wpm   ·   x'+best.combo,cx,cy+52);
-  if(NOW()-overAt>OVER_LOCK&&Math.floor(NOW()/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press  ENTER  to run it back   ·   S to share',cx,cy+84);}
+  ctx.fillStyle='rgba(7,6,16,0.86)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
+  glow('rgba(255,59,78,0.8)',24,()=>{ctx.fillStyle='#ff6a7a';ctx.font='bold 40px Georgia,serif';ctx.fillText('OVERTYPE',cx,cy-150);});
+  ctx.fillStyle='#eafaff';ctx.font='bold 19px "Courier New",monospace';ctx.fillText('SCORE  '+score,cx,cy-114);
+  if(newBest){ctx.fillStyle='#46e3ff';ctx.font='bold 12px "Courier New",monospace';ctx.fillText('NEW BEST',cx,cy-94);}
+  ctx.fillStyle='#a7a2c2';ctx.font='13px "Courier New",monospace';ctx.fillText('peak '+Math.round(peakWpm)+' wpm   ·   x'+bestCombo+' combo   ·   '+(runTime/1000).toFixed(0)+'s survived',cx,cy-74);
+  if(subState==='enter'){
+    ctx.fillStyle='#c9c4e6';ctx.font='bold 13px "Courier New",monospace';ctx.fillText('ENTER YOUR INITIALS',cx,cy-26);
+    const slots=[0,1,2].map(i=>initials[i]||'_').join('   ');
+    glow('rgba(70,227,255,0.6)',8,()=>{ctx.fillStyle='#46e3ff';ctx.font='bold 38px "Courier New",monospace';ctx.fillText(slots,cx,cy+22);});
+    ctx.fillStyle='#6f6a8c';ctx.font='12px "Courier New",monospace';ctx.fillText('type 3 letters',cx,cy+48);
+  }else if(subState==='sent'){
+    ctx.fillStyle='#8b86a8';ctx.font='14px "Courier New",monospace';ctx.fillText('submitting...',cx,cy);
+  }else if(subState==='done'){
+    ctx.fillStyle='#46e3ff';ctx.font='bold 14px "Courier New",monospace';ctx.fillText(myRank?('YOUR RANK   #'+myRank):'SUBMITTED',cx,cy-44);
+    if(board.length)drawBoard(board,cy-20,8,myRank);
+    if(Math.floor(NOW()/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press  ENTER  to run it back   ·   S to share',cx,cy+152);}
+  }else{
+    if(subState==='err'){ctx.fillStyle='#6f6a8c';ctx.font='13px "Courier New",monospace';ctx.fillText('leaderboard offline',cx,cy-14);}
+    ctx.fillStyle='#6f6a8c';ctx.font='13px "Courier New",monospace';ctx.fillText('your best  '+best.score+'   ·   '+best.wpm+' wpm   ·   x'+best.combo,cx,cy+12);
+    if(NOW()-overAt>OVER_LOCK&&Math.floor(NOW()/500)%2===0){ctx.fillStyle='#c9c4e6';ctx.font='14px "Courier New",monospace';ctx.fillText('press  ENTER  to run it back   ·   S to share',cx,cy+46);}
+  }
 }
 function wrap(txt,x,y,maxw,lh){const words=txt.split(' ');let line='',yy=y;
   for(const w of words){const t=line?line+' '+w:w;if(ctx.measureText(t).width>maxw&&line){ctx.fillText(line,x,yy);line=w;yy+=lh;}else line=t;}
@@ -365,7 +393,18 @@ addEventListener('keydown',e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key;
   if(state==='title'){if(k.length===1||k==='Enter'){startGame();e.preventDefault();}return;}
-  if(state==='over'){if(k==='Enter'&&NOW()-overAt>OVER_LOCK){startGame();e.preventDefault();}else if((k==='s'||k==='S')&&NOW()-overAt>OVER_LOCK){shareRun();e.preventDefault();}return;}
+  if(state==='over'){
+    if(subState==='enter'){
+      if(NOW()-overAt<OVER_LOCK)return;
+      if(/^[a-zA-Z]$/.test(k)){if(initials.length<3)initials+=k.toUpperCase();e.preventDefault();if(initials.length===3)submitScore();}
+      else if(k==='Backspace'){initials=initials.slice(0,-1);e.preventDefault();}
+      else if(k==='Enter'){if(initials.length>0)submitScore();e.preventDefault();}
+      return;
+    }
+    if(k==='Enter'&&NOW()-overAt>OVER_LOCK){startGame();e.preventDefault();}
+    else if((k==='s'||k==='S')&&NOW()-overAt>OVER_LOCK){shareRun();e.preventDefault();}
+    return;
+  }
   if(state==='levelup'){if(/^[a-zA-Z]$/.test(k)){handleLevelKey(k.toLowerCase());e.preventDefault();}return;}
   if(state==='play'&&/^[a-zA-Z]$/.test(k)){handleKey(k.toLowerCase());e.preventDefault();}
 });

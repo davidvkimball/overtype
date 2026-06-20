@@ -3,6 +3,9 @@
 Thumbs.db
 desktop.ini
 
+# node
+node_modules/
+
 # editor
 .vscode/
 .idea/
